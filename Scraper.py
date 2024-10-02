@@ -9,8 +9,8 @@ from datetime import datetime
 
 
 class Scraper:
-    def __init__(self, driver):
-        self.driver = driver
+    def __init__(self, url):
+        self.driver = self.setup_driver(url)
 
     def scroll_to_element(self, xpath=None, element=None):
         """Scroll to an element using its XPath and WebElement."""
@@ -136,11 +136,17 @@ class Scraper:
             print(f"An error occurred while selecting pages: {str(e)}")
         return data
 
-    def safe_find_element_text(self, by, value, default="null"):
-        """Method for handling no such element, returns null value when exception occurs"""
+    def safe_find_element_text(self, by, value, default="null", timeout=3):
+        """
+        Method for handling no such element, returns default value when exception occurs.
+        Uses a short explicit wait to reduce wait time.
+        """
         try:
-            return self.driver.find_element(by, value).text
-        except NoSuchElementException:
+            element = WebDriverWait(self.driver, timeout).until(
+                ec.presence_of_element_located((by, value))
+            )
+            return element.text
+        except (TimeoutException, NoSuchElementException):
             return default
 
     def scrape_data(self, route_name, route_link):
@@ -166,16 +172,37 @@ class Scraper:
             data.append(raw)
         return data
 
+    @staticmethod
+    def setup_driver(url):
+        chrome_options = Options()
+        chrome_options.add_argument('--disable-extensions')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('--blink-settings=imagesEnabled=false')
+        chrome_options.add_argument('--disable-features=NetworkService,NetworkServiceInProcess')
+        chrome_options.add_argument('--disable-software-rasterizer')
+        chrome_options.add_argument('--profile-directory=Default')
+        chrome_options.add_argument('--disable-smooth-scrolling')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        chrome_options.add_argument('--disk-cache-size=33554432')
+
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.maximize_window()
+        driver.implicitly_wait(10)
+        driver.get(url)
+        return driver
+
+    def quit_driver(self):
+        self.driver.quit()
+
 
 if __name__ == "__main__":
-    web_driver = webdriver.Chrome()
-    web_driver.get("https://www.redbus.in/")
-    web_driver.maximize_window()
-    web_driver.implicitly_wait(10)
-    scraper = Scraper(web_driver)
-
+    # web_driver = webdriver.Chrome()
+    # web_driver.get("https://www.redbus.in/")
+    # web_driver.maximize_window()
+    # web_driver.implicitly_wait(10)
+    scraper = Scraper("https://www.redbus.in/")
     scraper.click_element(By.XPATH, "(//div[@class='rtcCards'])[1]")
     scraped_data = scraper.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
     # print(scraped_data)
     # time.sleep(100)
-    web_driver.quit()
+    scraper.quit_driver()
