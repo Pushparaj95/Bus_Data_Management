@@ -77,13 +77,19 @@ class Scraper:
 
     def select_view_buses_and_load_page(self):
         """Method to select view buses button and loads page for selected button"""
-        no_of_buttons = len(self.driver.find_elements(By.XPATH("//div[text()='View Buses']")))
-        count = 1
-        xpath = "(//ul[@class='bus-items'])[{0}]"  # List element needs to be refreshed
-        for z in range(no_of_buttons):
-            scraper.click_element(By.XPATH, "(//div[text()='View Buses'])[1]")  # Xpath of View Buses
-            scraper.page_load_js(xpath.format(z))
-            count += 1
+        if self.safe_find_element_text(By.XPATH, "(//div[text()='View Buses'])[1]") != "null":
+            time.sleep(1)
+            self.scroll_to_element(xpath="(//div[text()='View Buses'])[1]")
+            time.sleep(1)
+            buttons = self.driver.find_elements(By.XPATH, "//div[text()='View Buses']")
+            no_of_buttons = len(buttons)
+            count = 1
+            xpath = "(//ul[@class='bus-items'])[{0}]"  # List element needs to be refreshed
+            for z in range(no_of_buttons):
+                time.sleep(2)
+                self.click_element(By.XPATH, "(//div[text()='View Buses'])[1]")  # Xpath of View Buses
+                self.page_load_js(xpath.format(z+1))
+                count += 1
 
     def click_link_and_open_in_new_window(self, element, route_name, route_link):
         """Method for Opening Route link buttons in new page and scrapping data"""
@@ -92,11 +98,10 @@ class Scraper:
 
         # switching to parent window
         self.driver.switch_to.window(self.driver.window_handles[1])
+        self.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
         self.select_view_buses_and_load_page()
-        scraper.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
-
         # Scraping data and storing in data
-        data = scraper.scrape_data(route_name, route_link)
+        data = self.scrape_data(route_name, route_link)
 
         # Closing and witching to parent window
         self.driver.close()
