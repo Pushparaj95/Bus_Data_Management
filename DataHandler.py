@@ -59,8 +59,9 @@ class DataHandler:
         """Insert data from a nested list into the specified table."""
         try:
             insert_query = f"""
-                INSERT INTO {table_name} (route, url, bus_id, bus_type, departure_time, duration, arrival_time, rating, price, seats_available)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO {table_name} (route, url, bus_id, bus_type, departure_time, duration, arrival_time, rating, 
+                price, seats_available)
+                VALUES (%s, %s, %s, %s, STR_TO_DATE(%s, '%H:%i'), %s, STR_TO_DATE(%s, '%H:%i'), %s, %s, %s)
             """
             self.cursor.executemany(insert_query, data)
             self.connection.commit()
