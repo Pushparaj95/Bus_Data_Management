@@ -9,11 +9,12 @@ from selenium import webdriver
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Scraper:
-    def __init__(self, url, headless=False):
+    def __init__(self, url, date, headless=False):
+        self.date_to_be_fetched = date
         if headless:
             self.driver = self.setup_driver_with_headless(url)
         else:
@@ -32,7 +33,25 @@ class Scraper:
         except Exception as e:
             print(f"An error occurred while scrolling: {str(e)}")
 
-    def click_element(self, locator_type, locator_value, timeout=20):
+    def modify_date_and_search(self, date):
+        """
+        Search buses data for given Data
+
+        Parameters:
+            date: Date of the day
+        """
+        day_xpath = "//span[contains(@class,'CalendarDays') and .='{0}']"
+
+        # Extracting day from date to pass in xpath, and removing 0 in 09 to work in day_xpath
+        day = date.split('-')[0]
+        day = day[1:] if day.startswith('0') else day
+
+        self.click_element(By.XPATH, "//div[contains(@class,'onward-modify')]")
+        self.click_element(By.XPATH, "//input[contains(@class,'DatePicker__Input')]")
+        self.click_element(By.XPATH, day_xpath.format(day))
+        self.click_element(By.XPATH, "//button[text()='SEARCH']")
+
+    def click_element(self, locator_type, locator_value, timeout=10):
         """Click an element after waiting for it to be clickable."""
         clickable_element = WebDriverWait(self.driver, timeout).until(
             ec.element_to_be_clickable((locator_type, locator_value))
@@ -45,7 +64,7 @@ class Scraper:
         print(f"Start: {datetime.now()}")
 
         # Wait for the list to be present using XPath
-        WebDriverWait(self.driver, 20).until(
+        WebDriverWait(self.driver, 10).until(
             ec.presence_of_element_located((By.XPATH, xpath))
         )
 
@@ -96,12 +115,20 @@ class Scraper:
                 self.page_load_js(list_xpath.format(z + 1))
 
     def click_link_and_open_in_new_window(self, element, route_name, route_link):
-        """Method for Opening Route link buttons in new page and scrapping data"""
+        """
+        Method for Opening Route link buttons in new page and scrapping data
+        :param element: Element to be opened in new window
+        :param route_name: Route Name to be added in scraped data
+        :param route_link: Route Link to be added in scraped data
+        :returns scraped date of individual given element page.
+        :rtype List[List]
+        """
         # Control clicks to open in new window
         ActionChains(self.driver).key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
-        # switching to parent window
+        # Switching to parent window
         self.driver.switch_to.window(self.driver.window_handles[1])
+        self.modify_date_and_search(self.date_to_be_fetched)
         self.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
         self.select_view_buses_and_load_page()
         # Scraping data and storing in data
@@ -125,13 +152,13 @@ class Scraper:
         """Clicks on page elements specified by CSS selector and collects data from all pages."""
         pages_data = []
         try:
-            WebDriverWait(self.driver, 20).until(
+            WebDriverWait(self.driver, 10).until(
                 ec.presence_of_all_elements_located((By.CSS_SELECTOR, page_css))
             )
             pages = self.driver.find_elements(By.CSS_SELECTOR, page_css)
 
             # Loop through the page elements
-            for page in pages[:1]:
+            for page in pages:
                 self.scroll_to_element(element=page)  # Scrolling to page element
                 time.sleep(1)
                 page.click()
@@ -163,7 +190,14 @@ class Scraper:
             return default
 
     def scrape_data(self, route_name, route_link):
-        """Custom scrape data method with dynamic xpath, required route_name and route_link"""
+        """
+        Custom scrape data method with dynamic xpath, required route_name and route_link.
+        :param route_name: Route Name to be added in scraped data
+        :param route_link: Route Link to be added in scraped data
+        :return scraped date of individual element page
+        :rtype List[List]
+        """
+
         page_data = []
         d_xpath = "(//li[contains(@class,'row-sec clearfix')])[{0}]/descendant::div[contains(@class,'{1}')]"
         # Getting length of routes and scrolling to first element in page
@@ -193,6 +227,11 @@ class Scraper:
 
     @staticmethod
     def setup_driver_with_headless(url):
+        """
+        Creates driver instance of chrome driver with chrome options to run in headless mode.
+        :param url: url to open in browser.
+        :return: created webdriver instance.
+        """
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
@@ -210,13 +249,18 @@ class Scraper:
         chrome_options.add_experimental_option('useAutomationExtension', False)
         driver = webdriver.Chrome(options=chrome_options)
 
-        driver.implicitly_wait(30)
-        driver.set_page_load_timeout(30)
+        driver.implicitly_wait(60)
+        driver.set_page_load_timeout(60)
         driver.get(url)
         return driver
 
     @staticmethod
     def setup_driver(url):
+        """
+        Creates driver instance of chrome driver with chrome options to increase speed of execution.
+        :param url: url to open in browser.
+        :return: created webdriver instance.
+        """
         chrome_options = Options()
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-gpu')
@@ -230,16 +274,22 @@ class Scraper:
 
         driver = webdriver.Chrome(options=chrome_options)
         driver.maximize_window()
-        driver.implicitly_wait(20)
+        driver.implicitly_wait(10)
         driver.get(url)
         return driver
 
     def quit_driver(self):
+        """Quits driver instance"""
         self.driver.quit()
 
-    def scrape_element(self, count):
-        print(f"Scraping from element: {count}")
-        xpath = f"(//div[@class='rtcCards'])[{count}]"
+    def scrape_element(self, index):
+        """
+            scrapes data for all pages for given index of elements.
+            :param index: The index of the element to scrape.
+            :return: A nested list containing the scraped data for all the specified element.
+            """
+        print(f"Scraping from element: {index}")
+        xpath = f"(//div[@class='rtcCards'])[{index}]"
         self.click_element(By.XPATH, xpath)
         datas = self.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
         self.click_element(By.XPATH, "//a[@title='redBus_home']")
@@ -247,7 +297,13 @@ class Scraper:
 
 
 def scrape_data_for_element(count):
-    scraper = Scraper("https://www.redbus.in/", headless=False)  # Open a new browser for each thread
+    """
+    Opens a new browser session for each thread and scrapes data for a specific element.
+    :param count: The index of the element to scrape.
+    :return: A nested list containing the scraped data for the specified element.
+    """
+    date = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
+    scraper = Scraper(URL, date, headless=False)  # Open a new browser for each thread
     try:
         scrape_data = scraper.scrape_element(count)
     finally:
@@ -255,22 +311,14 @@ def scrape_data_for_element(count):
     return scrape_data
 
 
-if __name__ == "__main__":
-    # scraper = Scraper("https://www.redbus.in/", headless=False)
-    # scraper.click_element(By.XPATH, "(//div[@class='rtcCards'])[1]")
-    # scraped_data = scraper.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
-    # print(scraped_data)
-    # scraper.quit_driver()
-
+def scrape_data_parallely(thread_count=2, num_of_elements=10):
     print(f"Start: {datetime.now()}")
 
     scraped_data = []
-    max_threads = 4
-    num_elements = 4
 
-    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+    with ThreadPoolExecutor(max_workers=thread_count) as executor:
         future_to_element = {executor.submit(scrape_data_for_element, count): count for count in
-                             range(1, num_elements + 1)}
+                             range(1, num_of_elements + 1)}
 
         # Process results as they complete
         for future in as_completed(future_to_element):
@@ -284,17 +332,7 @@ if __name__ == "__main__":
     print(f"End: {datetime.now()}")
     print(scraped_data)
 
-    # print(f"Start: {datetime.now()}")
-    # count = 6
-    # xpath = "(//div[@class='rtcCards'])[{0}]"
-    # scraped_data = []
-    # while count < 9:
-    #     print("Scraping from element: ", count)
-    #     scraper.click_element(By.XPATH, xpath.format(count))
-    #     scraped_data += scraper.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
-    #     count += 1
-    #     scraper.click_element(By.XPATH, "//span[text()='Home']/parent::a")
-    # print(f"End: {datetime.now()}")
-    # print(scraped_data)
-    # time.sleep(100)
-    # scraper.quit_driver()
+
+URL = "https://www.redbus.in/"
+if __name__ == "__main__":
+    scrape_data_parallely(thread_count=1, num_of_elements=1)
