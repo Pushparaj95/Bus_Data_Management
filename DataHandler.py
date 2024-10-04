@@ -4,6 +4,13 @@ import new
 
 
 class DataHandler:
+    """
+    Custom class created with Mysql Connector for adding scraped data to database table
+    :param host: Hostname of the MySQL database.
+    :param user: Username for connecting to the MySQL database.
+    :param password: Password for connecting to the MySQL database.
+    :param database: Name of the database to connect.
+    """
     def __init__(self, host, user, password, database):
         self.db_config = {
             'host': host,
@@ -31,7 +38,10 @@ class DataHandler:
             print("Database connection closed.")
 
     def drop_and_create_table(self, table_name):
-        """Drop the table if it exists and create a new one."""
+        """
+        Drop the table if it exists and create a new one.
+        :param table_name:  Table Name in database to be Created.
+        """
         try:
             self.cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
             print(f"Table '{table_name}' dropped.")
@@ -56,7 +66,12 @@ class DataHandler:
             print(f"Error during table creation: {error}")
 
     def insert_data(self, table_name, data):
-        """Insert data from a nested list into the specified table."""
+        """
+        Insert data from a nested list into the specified table.
+        :param table_name:  Table Name in database to be inserted.
+        :param data:  Data to be inserted in Table.
+        """
+
         try:
             insert_query = f"""
                 INSERT INTO {table_name} (route, url, bus_id, bus_type, departure_time, duration, arrival_time, rating, 
@@ -71,10 +86,10 @@ class DataHandler:
 
     def add_scraped_data_to_database(self, table_name, data):
         """
-        Custom method to add scraped data in Database using MYSQL Connector
-        Required Table name, data to insert
+        Custom method to add scraped data in Database using MYSQL Connector.
+        :param table_name: Table Name in database to be added.
+        :param data: Data to be inserted in Database.
         """
-
         self.connect()
         self.drop_and_create_table(table_name)
         self.insert_data(table_name, data)
@@ -89,9 +104,4 @@ if __name__ == "__main__":
         password='Push@1612',
         database='webscrape')
 
-    # Connect to the database
-    # db_manager.connect()
-    # db_manager.drop_and_create_table('bus_routes')
-    # db_manager.insert_data('bus_routes', new.l2)
-    # db_manager.disconnect()
-    db_manager.add_scraped_data_to_database('bus_routes', new.l2)
+    # db_manager.add_scraped_data_to_database('bus_routes', new.l2)

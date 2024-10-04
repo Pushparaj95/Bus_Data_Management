@@ -1,6 +1,5 @@
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver import ActionChains, Keys
 from selenium.webdriver.chrome.options import Options
@@ -11,8 +10,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from datetime import datetime, timedelta
 
+from DataHandler import DataHandler
+
 
 class Scraper:
+    """
+       A web scraping class that initializes a browser session to scrape data from a given URL.
+
+       :param url: The URL to be scraped.
+       :param date: The specific date for which data needs to be fetched.
+       :param headless: Boolean flag to indicate whether the browser should run in headless mode (default: False).
+       """
     def __init__(self, url, date, headless=False):
         self.date_to_be_fetched = date
         if headless:
@@ -21,7 +29,11 @@ class Scraper:
             self.driver = self.setup_driver(url)
 
     def scroll_to_element(self, xpath=None, element=None):
-        """Scroll to an element using its XPath and WebElement."""
+        """
+        Scroll to an element using its XPath and WebElement.
+        :param xpath: XPATH of an WebElement.
+        :param element: WebElement to scroll.
+        """
         try:
             if element:
                 self.driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center'});",
@@ -36,9 +48,7 @@ class Scraper:
     def modify_date_and_search(self, date):
         """
         Search buses data for given Data
-
-        Parameters:
-            date: Date of the day
+        :param date : Date to be searched.
         """
         day_xpath = "//span[contains(@class,'CalendarDays') and .='{0}']"
 
@@ -52,7 +62,12 @@ class Scraper:
         self.click_element(By.XPATH, "//button[text()='SEARCH']")
 
     def click_element(self, locator_type, locator_value, timeout=10):
-        """Click an element after waiting for it to be clickable."""
+        """
+        Click an element after waiting for it to be clickable.
+        :param locator_type: Locator type of WebElement
+        :param locator_value: Locator value of WebElement
+        :param timeout: Timeout seconds to wait, (Default: 10)
+        """
         clickable_element = WebDriverWait(self.driver, timeout).until(
             ec.element_to_be_clickable((locator_type, locator_value))
         )
@@ -60,9 +75,10 @@ class Scraper:
         clickable_element.click()
 
     def page_load_js(self, xpath):
-        """method to reload a dynamic list on a page using XPath."""
-        print(f"Start: {datetime.now()}")
-
+        """
+        Custom method to reload a dynamic list on a page using XPath.
+        :param xpath: XPATH of an WebElement List
+        """
         # Wait for the list to be present using XPath
         WebDriverWait(self.driver, 10).until(
             ec.presence_of_element_located((By.XPATH, xpath))
@@ -96,13 +112,12 @@ class Scraper:
             # Break the loop if no new content is loaded (i.e., list fully loaded)
             if new_height == previous_height:
                 break
-
             previous_height = new_height
 
-        print(f"Done: {datetime.now()}")
-
     def select_view_buses_and_load_page(self):
-        """Method to select view buses button and loads page for selected button"""
+        """
+        Method to select view buses button and loads search result list for selected button
+        """
         if self.safe_find_element_text(By.XPATH, "(//div[text()='View Buses'])[1]", timeout=1) != "null":
             self.scroll_to_element(xpath="(//div[text()='View Buses'])[1]")
             time.sleep(1)
@@ -139,23 +154,17 @@ class Scraper:
         self.driver.switch_to.window(self.driver.window_handles[0])
         return page_data
 
-    def check_results(self):
-        try:
-            element = WebDriverWait(self.driver, 5).until(
-                ec.presence_of_element_located((By.CSS_SELECTOR, ".oops-wrapper"))
-            )
-            self.click_element(By.CSS_SELECTOR, element)
-        except (TimeoutException, NoSuchElementException):
-            pass
-
-    def navigate_to_pages_and_collect_data(self, page_css):
-        """Clicks on page elements specified by CSS selector and collects data from all pages."""
+    def navigate_to_pages_and_collect_data(self, page_css_selector):
+        """
+        Clicks on page elements specified by CSS selector and collects data from all pages.
+        :param page_css_selector: CSS SELECTOR of WebElement to be navigated
+        """
         pages_data = []
         try:
             WebDriverWait(self.driver, 10).until(
-                ec.presence_of_all_elements_located((By.CSS_SELECTOR, page_css))
+                ec.presence_of_all_elements_located((By.CSS_SELECTOR, page_css_selector))
             )
-            pages = self.driver.find_elements(By.CSS_SELECTOR, page_css)
+            pages = self.driver.find_elements(By.CSS_SELECTOR, page_css_selector)
 
             # Loop through the page elements
             for page in pages:
@@ -176,14 +185,19 @@ class Scraper:
             print(f"An error occurred while selecting pages: {str(e)}")
         return pages_data
 
-    def safe_find_element_text(self, by, value, default="null", timeout=3):
+    def safe_find_element_text(self, locator_type, locator_value, default="null", timeout=3):
         """
         Method for handling no such element, returns default value when exception occurs.
         Uses a short explicit wait to reduce wait time.
+        :param locator_type: Locator type of WebElement
+        :param locator_value: Locator value of WebElement
+        :param default: Default Value of text to be returned (default:'null')
+        :param timeout: Timeout seconds to wait, (Default: 10)
+        :return str
         """
         try:
             element = WebDriverWait(self.driver, timeout).until(
-                ec.presence_of_element_located((by, value))
+                ec.presence_of_element_located((locator_type, locator_value))
             )
             return element.text
         except (TimeoutException, NoSuchElementException):
@@ -313,8 +327,7 @@ def scrape_data_for_element(count):
 
 def scrape_data_parallely(thread_count=2, num_of_elements=10):
     print(f"Start: {datetime.now()}")
-
-    scraped_data = []
+    parallel_scraped_data = []
 
     with ThreadPoolExecutor(max_workers=thread_count) as executor:
         future_to_element = {executor.submit(scrape_data_for_element, count): count for count in
@@ -325,14 +338,26 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10):
             count = future_to_element[future]
             try:
                 data = future.result()
-                scraped_data += data
+                parallel_scraped_data += data
             except Exception as exc:
                 print(f"Element {count} generated an exception: {exc}")
 
     print(f"End: {datetime.now()}")
-    print(scraped_data)
+    # print(parallel_scraped_data)
+    return parallel_scraped_data
 
 
 URL = "https://www.redbus.in/"
+
+
 if __name__ == "__main__":
-    scrape_data_parallely(thread_count=1, num_of_elements=1)
+    scraped_data = scrape_data_parallely(thread_count=2, num_of_elements=10)
+
+    data_handler = DataHandler(
+        host='localhost',
+        user='root',
+        password='Push@1612',
+        database='webscrape')
+
+    # Adding scraped data to given Database
+    data_handler.add_scraped_data_to_database('bus_routes', scraped_data)
