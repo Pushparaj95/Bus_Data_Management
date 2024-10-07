@@ -50,7 +50,7 @@ class DataHandler:
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     route VARCHAR(100),
                     url VARCHAR(255),
-                    bus_id VARCHAR(50),
+                    bus_id VARCHAR(255),
                     bus_type VARCHAR(50),
                     departure_time TIME,
                     duration VARCHAR(20),

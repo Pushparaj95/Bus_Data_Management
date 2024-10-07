@@ -1,3 +1,5 @@
+import base64
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium.common import NoSuchElementException, TimeoutException
@@ -9,7 +11,6 @@ import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from datetime import datetime, timedelta
-
 from DataHandler import DataHandler
 
 
@@ -21,12 +22,37 @@ class Scraper:
        :param date: The specific date for which data needs to be fetched.
        :param headless: Boolean flag to indicate whether the browser should run in headless mode (default: False).
        """
+
     def __init__(self, url, date, headless=False):
         self.date_to_be_fetched = date
         if headless:
             self.driver = self.setup_driver_with_headless(url)
         else:
             self.driver = self.setup_driver(url)
+
+    def capture_full_page_screenshot(self, screenshot_name):
+        # Add a timestamp to make the screenshot name unique
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        unique_screenshot_name = f"{screenshot_name}_{timestamp}.png"
+        screenshot_path = os.path.join("Screenshots", unique_screenshot_name)
+
+        try:
+            # Using Chrome DevTools to capture a full page screenshot
+            screenshot_data = self.driver.execute_cdp_cmd("Page.captureScreenshot", {
+                "format": "png",
+                "captureBeyondViewport": True
+            })
+
+            # The response will have the screenshot data in base64 format
+            screenshot_base64 = screenshot_data.get('data')
+
+            # Decode the base64 data and save it as a PNG file
+            with open(screenshot_path, "wb") as file:
+                file.write(base64.b64decode(screenshot_base64))
+
+            print(f"Full page screenshot saved as: {screenshot_path}")
+        except Exception as e:
+            print(f"Error while saving full page screenshot: {e}")
 
     def scroll_to_element(self, xpath=None, element=None):
         """
@@ -43,6 +69,7 @@ class Scraper:
                 self.driver.execute_script("arguments[0].scrollIntoView({ behavior: 'smooth', block: 'center'});",
                                            scroll_element)
         except Exception as e:
+            # self.capture_full_page_screenshot("error_screenshot")
             print(f"An error occurred while scrolling: {str(e)}")
 
     def modify_date_and_search(self, date):
@@ -144,7 +171,11 @@ class Scraper:
         # Switching to parent window
         self.driver.switch_to.window(self.driver.window_handles[1])
         self.modify_date_and_search(self.date_to_be_fetched)
-        self.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
+
+        elements = self.driver.find_elements(By.XPATH, "(//ul[@class='bus-items'])[1]")
+        if elements:
+            self.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
+
         self.select_view_buses_and_load_page()
         # Scraping data and storing in data
         page_data = self.scrape_data(route_name, route_link)
@@ -171,19 +202,23 @@ class Scraper:
                 self.scroll_to_element(element=page)  # Scrolling to page element
                 time.sleep(1)
                 page.click()
-                # Element of Route names to fetch href and text attribute
-                url_elements = self.driver.find_elements(By.CSS_SELECTOR, ".route_details a")
-                urls = [elem.get_attribute('href') for elem in url_elements]
-                routes = [elem.text for elem in url_elements]
-                # Scrolling to first route
-                self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
+                self.fetch_route_details(pages_data)
 
-                for index, element in enumerate(url_elements):
-                    pages_data += self.click_link_and_open_in_new_window(element, routes[index], urls[index])
-
-        except Exception as e:
-            print(f"An error occurred while selecting pages: {str(e)}")
+        except (TimeoutException, NoSuchElementException) as e:
+            print("Pages is not available, single page to fetch")
+            self.fetch_route_details(pages_data)
         return pages_data
+
+    def fetch_route_details(self, pages_list):
+        # Element of Route names to fetch href and text attribute
+        url_elements = self.driver.find_elements(By.CSS_SELECTOR, ".route_details a")
+        urls = [elem.get_attribute('href') for elem in url_elements]
+        routes = [elem.text for elem in url_elements]
+        # Scrolling to first route
+        self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
+
+        for index, element in enumerate(url_elements):
+            pages_list += self.click_link_and_open_in_new_window(element, routes[index], urls[index])
 
     def safe_find_element_text(self, locator_type, locator_value, default="null", timeout=3):
         """
@@ -201,6 +236,7 @@ class Scraper:
             )
             return element.text
         except (TimeoutException, NoSuchElementException):
+            # self.capture_full_page_screenshot("error_screenshot")
             return default
 
     def scrape_data(self, route_name, route_link):
@@ -211,7 +247,6 @@ class Scraper:
         :return scraped date of individual element page
         :rtype List[List]
         """
-
         page_data = []
         d_xpath = "(//li[contains(@class,'row-sec clearfix')])[{0}]/descendant::div[contains(@class,'{1}')]"
         # Getting length of routes and scrolling to first element in page
@@ -306,7 +341,6 @@ class Scraper:
         xpath = f"(//div[@class='rtcCards'])[{index}]"
         self.click_element(By.XPATH, xpath)
         datas = self.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
-        self.click_element(By.XPATH, "//a[@title='redBus_home']")
         return datas
 
 
@@ -343,15 +377,14 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10):
                 print(f"Element {count} generated an exception: {exc}")
 
     print(f"End: {datetime.now()}")
-    # print(parallel_scraped_data)
+    print(parallel_scraped_data)
     return parallel_scraped_data
 
 
 URL = "https://www.redbus.in/"
 
-
 if __name__ == "__main__":
-    scraped_data = scrape_data_parallely(thread_count=2, num_of_elements=10)
+    scraped_data = scrape_data_parallely(thread_count=4, num_of_elements=10)
 
     data_handler = DataHandler(
         host='localhost',
