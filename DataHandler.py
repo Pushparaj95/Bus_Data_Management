@@ -30,6 +30,30 @@ class DataHandler:
         except mysql.connector.Error as error:
             print(f"Error connecting to database: {error}")
 
+    def execute_query(self, query, params=None):
+        """
+        Execute an SQL query and return the result.
+
+        :param query: SQL query to execute.
+        :param params: Optional query parameters.
+        :return: Result of the query if it's a SELECT, otherwise return affected rows.
+        """
+        try:
+            cursor = self.connection.cursor(dictionary=True)  # Use dictionary cursor for easier result parsing
+            cursor.execute(query, params)
+
+            # For SELECT queries, return the fetched data
+            if query.strip().upper().startswith("SELECT"):
+                result = cursor.fetchall()
+                return result
+
+        except mysql.connector.Error as e:
+            print(f"Error executing query: {e}")
+            self.connection.rollback()
+            raise e
+        finally:
+            self.cursor.close()
+
     def disconnect(self):
         """Close the connection to the MySQL database."""
         if self.connection and self.connection.is_connected():
@@ -39,7 +63,7 @@ class DataHandler:
 
     def drop_and_create_table(self, table_name):
         """
-        Drop the table if it exists and create a new one.
+        Drop the table if it exists and create a new table.
         :param table_name:  Table Name in database to be Created.
         """
         try:
@@ -104,4 +128,4 @@ if __name__ == "__main__":
         password='Push@1612',
         database='webscrape')
 
-    # db_manager.add_scraped_data_to_database('bus_routes', new.l2)
+    db_manager.add_scraped_data_to_database('bus_routes', new.l6)

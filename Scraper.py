@@ -344,14 +344,17 @@ class Scraper:
         return datas
 
 
-def scrape_data_for_element(count):
+def scrape_data_for_element(count, default_date=None):
     """
     Opens a new browser session for each thread and scrapes data for a specific element.
+    :param default_date: It will fetch tomorrow's date by default, else given date wil be used to scrape
     :param count: The index of the element to scrape.
     :return: A nested list containing the scraped data for the specified element.
     """
-    date = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
-    scraper = Scraper(URL, date, headless=False)  # Open a new browser for each thread
+
+    if default_date is None:
+        default_date = (datetime.now() + timedelta(days=1)).strftime("%d-%b-%Y")
+    scraper = Scraper(URL, default_date, headless=False)  # Open a new browser for each thread
     try:
         scrape_data = scraper.scrape_element(count)
     finally:
@@ -359,12 +362,12 @@ def scrape_data_for_element(count):
     return scrape_data
 
 
-def scrape_data_parallely(thread_count=2, num_of_elements=10):
+def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
     print(f"Start: {datetime.now()}")
     parallel_scraped_data = []
 
     with ThreadPoolExecutor(max_workers=thread_count) as executor:
-        future_to_element = {executor.submit(scrape_data_for_element, count): count for count in
+        future_to_element = {executor.submit(scrape_data_for_element, count, date): count for count in
                              range(1, num_of_elements + 1)}
 
         # Process results as they complete
