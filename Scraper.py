@@ -1,5 +1,3 @@
-import base64
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from selenium.common import NoSuchElementException, TimeoutException
@@ -29,30 +27,6 @@ class Scraper:
             self.driver = self.setup_driver_with_headless(url)
         else:
             self.driver = self.setup_driver(url)
-
-    def capture_full_page_screenshot(self, screenshot_name):
-        # Add a timestamp to make the screenshot name unique
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        unique_screenshot_name = f"{screenshot_name}_{timestamp}.png"
-        screenshot_path = os.path.join("Screenshots", unique_screenshot_name)
-
-        try:
-            # Using Chrome DevTools to capture a full page screenshot
-            screenshot_data = self.driver.execute_cdp_cmd("Page.captureScreenshot", {
-                "format": "png",
-                "captureBeyondViewport": True
-            })
-
-            # The response will have the screenshot data in base64 format
-            screenshot_base64 = screenshot_data.get('data')
-
-            # Decode the base64 data and save it as a PNG file
-            with open(screenshot_path, "wb") as file:
-                file.write(base64.b64decode(screenshot_base64))
-
-            print(f"Full page screenshot saved as: {screenshot_path}")
-        except Exception as e:
-            print(f"Error while saving full page screenshot: {e}")
 
     def scroll_to_element(self, xpath=None, element=None):
         """
@@ -363,6 +337,13 @@ def scrape_data_for_element(count, default_date=None):
 
 
 def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
+    """
+    Custom method to create separate driver instance and scrape data parallely
+    :param thread_count: Count of threads to use for execution
+    :param num_of_elements: count of services data to be scraped from RedBus
+    :param date: Date of data to be scraped, If not provided will scrape tomorrow's date by default.
+    :return: scraped data
+    """
     print(f"Start: {datetime.now()}")
     parallel_scraped_data = []
 
@@ -390,10 +371,13 @@ if __name__ == "__main__":
     scraped_data = scrape_data_parallely(thread_count=4, num_of_elements=10)
 
     data_handler = DataHandler(
-        host='localhost',
-        user='root',
-        password='Push@1612',
-        database='webscrape')
+        host='localhost',  # Give your Host name
+        user='root',  # Give your username
+        password='Your password',  # Give your password
+        database='Your database name',  # Give your database name
+        )
 
     # Adding scraped data to given Database
-    data_handler.add_scraped_data_to_database('bus_routes', scraped_data)
+    data_handler.add_scraped_data_to_database('your_table', scraped_data)  # Change your table name
+
+    # After changing the database credentials, Execute this class to scrape data from RedBus

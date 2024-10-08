@@ -11,6 +11,15 @@ for key in ['user_txt', 'database_txt', 'host_txt', 'table_txt', 'password_txt']
 
 
 def fetch_data(user, password, host, database, table):
+    """
+    custom class to check Database Connection.
+    :param user: username of SQL database
+    :param password: password of SQL database
+    :param host: host name of SQL database
+    :param database:  name of database to be used
+    :param table: table name in given database
+    :return:
+    """
     try:
         db_manager = DataHandler(host=host, user=user, password=password, database=database)
         db_manager.connect()
@@ -31,6 +40,9 @@ def fetch_data(user, password, host, database, table):
 
 
 def display_homepage():
+    """
+    Custom method with CSS styling for displaying home page details in UI
+    """
     # Custom CSS for better styling
     st.markdown("""
         <style>
@@ -86,7 +98,7 @@ def display_homepage():
         """)
 
     # Main sections
-    st.markdown('<p class="medium-font">Main Features</p>', unsafe_allow_html=True)
+    st.markdown('<p class="medium-font">Menu Features</p>', unsafe_allow_html=True)
 
     # Use custom HTML for the layout
     st.markdown("""
@@ -136,9 +148,10 @@ def display_homepage():
             To begin using the application:
             1. Select DataBase from the menu on the left.
             2. Provide Database Credentials and Check before proceeding.
-            3. Then Select Scrape Data.
-            4. Provide Thread Count, Number of services and date to scrape date.
-            5. Then Select, Select Bus and perform Dynamic Filtering.
+            3. If Data is already scraped in given Database you can Move to Select Bus and perform Dynamic filtering.
+            4. If Data is not present in Database, Select Scrape Data.
+            5. Provide Thread Count, Number of services and date to scrape date.
+            6. Then Select, Select Bus and perform Dynamic Filtering.
         """)
 
 
@@ -159,6 +172,7 @@ if option == 'Home':
 # Fetch Data
 elif option == 'DataBase':
     st.header("Database Credentials")
+    st.info("Prerequisite: Database and Table need to be present in given credentials")
     cols = st.columns(3)
     fields = [('User', 'user_txt'), ('Password', 'password_txt'),
               ('Host', 'host_txt'), ('Database', 'database_txt'),
@@ -205,7 +219,6 @@ elif option == 'Scrape Data':
     - **Number of Services**: No of Government Services data to be scraped in RedBus.
     """)
 
-# Select Buses
 elif option == 'Select Bus':
     if not st.session_state.database_txt or not st.session_state.host_txt:
         st.error("Please enter database details in Fetch Data page to proceed")

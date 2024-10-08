@@ -1,7 +1,5 @@
 import mysql.connector
 
-import new
-
 
 class DataHandler:
     """
@@ -123,9 +121,23 @@ class DataHandler:
 if __name__ == "__main__":
     # SQL database connection details
     db_manager = DataHandler(
-        host='localhost',
-        user='root',
-        password='Push@1612',
-        database='webscrape')
+        host='localhost',  # Give your Host name
+        user='root',  # Give your username
+        password='Your password',  # Give your password
+        database='Your database name',  # Give your database name
+    )
 
-    db_manager.add_scraped_data_to_database('bus_routes', new.l6)
+    # db_manager.add_scraped_data_to_database('your_table', data=your_data)
+
+    # You can add data to your database with this custom method having similar column in your table
+
+    #                     route VARCHAR(100),
+    #                     url VARCHAR(255),
+    #                     bus_id VARCHAR(255),
+    #                     bus_type VARCHAR(50),
+    #                     departure_time TIME,
+    #                     duration VARCHAR(20),
+    #                     arrival_time TIME,
+    #                     rating FLOAT,
+    #                     price DECIMAL(10, 2),
+    #                     seats_available INT

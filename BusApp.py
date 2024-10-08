@@ -17,6 +17,10 @@ class BusApp:
         self.table = table
 
     def create_db_connection(self):
+        """
+        Method to create database connection with mysql.Connector
+        :return: boolean True when connected, else False
+        """
         try:
             self.connection = mysql.connector.connect(**self.db_config)
             if self.connection.is_connected():
@@ -26,6 +30,10 @@ class BusApp:
             return False
 
     def fetch_bus_data(self):
+        """
+        Method to retrieve all data from given table, and converts to DataFrame
+        :return: boolean True when Success, else False
+        """
         try:
             cursor = self.connection.cursor(dictionary=True)
             query = f"SELECT * FROM {self.table}"
@@ -39,6 +47,11 @@ class BusApp:
 
     @staticmethod
     def format_timedelta(td):
+        """
+        custom method to change timedelta object to readable format as HH:MM:SS
+        :param td: timedelta values to be formatted
+        :return: converted time format as str
+        """
         total_seconds = int(td.total_seconds())
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
@@ -49,7 +62,9 @@ class BusApp:
         return time_string.strip() + ":00"
 
     def setup_ui(self):
-        # st.set_page_config(layout="wide")
+        """
+        Custom method to set up UI
+        """
         title = "Bus Selection App"
         title_format = (f'<p style="text-align: center; font-family: Arial; color: #000000; font-size: 40px; '
                         f'font-weight: bold;">{title}</p>')
@@ -62,6 +77,9 @@ class BusApp:
         self.setup_filters()
 
     def setup_filters(self):
+        """
+        Custom method to set up filters in UI
+        """
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -87,6 +105,9 @@ class BusApp:
             self.filter_and_display_results()
 
     def filter_and_display_results(self):
+        """
+        Method for dynamic filtering in database with user inputs
+        """
         filtered_df = self.df.copy()
 
         # Apply filters
@@ -143,10 +164,14 @@ class BusApp:
 
 
 if __name__ == "__main__":
+    # Run this class with database credentials to create dynamic filtering page
     app = BusApp(
-        host='localhost',
-        user='root',
-        password='Push@1612',
-        database='webscrape',
-        table='bus_routes')
+        host='localhost',  # Give your Host name
+        user='root',  # Give your username
+        password='Your password',  # Give your password
+        database='Your database name',  # Give your database name
+        table='Your database table')  # Give your table name
     app.run()
+
+    # Run the below code in terminal
+    # streamlit run BusApp.py
