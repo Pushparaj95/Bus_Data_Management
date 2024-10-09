@@ -192,10 +192,6 @@ class Scraper:
         urls = [elem.get_attribute('href') for elem in url_elements]
         routes = [elem.text for elem in url_elements]
 
-        # first_route = self.driver.find_elements(By.XPATH, "(//div[@class='route_details']/a)[1]")
-        # if first_route:  # Scrolling to first route
-        #     self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
-
         for index, element in enumerate(url_elements):
             page_data = self.click_link_and_open_in_new_window(element, routes[index], urls[index])
 
