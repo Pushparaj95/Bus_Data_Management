@@ -361,7 +361,7 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
                 print(f"Element {count} generated an exception: {exc}")
 
     print(f"End: {datetime.now()}")
-    print(parallel_scraped_data)
+    # print(parallel_scraped_data)
     return parallel_scraped_data
 
 

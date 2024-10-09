@@ -204,6 +204,7 @@ elif option == 'Scrape Data':
                 st.error("Please enter database details to proceed")
             else:
                 with st.spinner('Scraping data...'):
+                    st.info('This process will take around one hour to complete...')
                     date = date_selector.strftime("%d-%b-%Y")
                     scraped_data = Scraper.scrape_data_parallely(thread_count, services_count, date)
                     data_handler = DataHandler(
@@ -217,6 +218,7 @@ elif option == 'Scrape Data':
     **NOTE**: 
     - **Thread Count**: count of parallel scraping using Chrome.
     - **Number of Services**: No of Government Services data to be scraped in RedBus.
+    - **Date**: Date of Services Data to be scraped from RedBus.
     """)
 
 elif option == 'Select Bus':
