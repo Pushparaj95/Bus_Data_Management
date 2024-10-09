@@ -191,10 +191,10 @@ elif option == 'Scrape Data':
     st.header("Scrape Data from RedBus")
     col1, col2 = st.columns(2)
     with col1:
-        thread_count = st.number_input("Thread Count", min_value=1, step=1, value=1)
+        thread_count = st.number_input("Thread Count", min_value=1, max_value=6, step=1, value=1)
         date_selector = st.date_input("Select a date to Scrape data from RedBus")
     with col2:
-        services_count = st.number_input("Number of Services", min_value=1, step=1, value=1)
+        services_count = st.number_input("Number of Services", min_value=1, max_value=15, step=1, value=1)
         st.write('<div style="height: 28px;"></div>', unsafe_allow_html=True)
 
         if st.button('Start Scrape'):
@@ -206,7 +206,7 @@ elif option == 'Scrape Data':
                 with st.spinner('Scraping data...'):
                     st.info('This process will take around one hour to complete...')
                     date = date_selector.strftime("%d-%b-%Y")
-                    scraped_data = Scraper.scrape_data_parallely(thread_count, services_count, date)
+                    scraped_data = Scraper.scrape_data_in_parallel(thread_count, services_count, date)
                     data_handler = DataHandler(
                         **{k: st.session_state[v] for k, v in zip(['host', 'user', 'password', 'database'],
                                                                   ['host_txt', 'user_txt', 'password_txt',
