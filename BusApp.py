@@ -86,11 +86,11 @@ class BusApp:
             routes = ["All"] + sorted(self.df["route"].unique())
             st.selectbox("Select Route", routes, key="route")
 
-            seat_types = ["All", "Sleeper", "Semi Sleeper", "Seater", "Seater Pushback"]
+            seat_types = ["All", "Sleeper", "Semi Sleeper", "Seater"]
             st.selectbox("Select Seat Type", seat_types, key="seat_type")
 
         with col2:
-            ac_types = ["All", "AC", "Non AC"]
+            ac_types = ["All", "AC", "NON AC"]
             st.selectbox("Select AC Type", ac_types, key="ac_type")
 
             st.slider("Minimum Rating", 1.0, 5.0, 1.0, 0.5, key="min_rating")
@@ -119,11 +119,13 @@ class BusApp:
                 filtered_df["bus_type"].str.contains(st.session_state.seat_type, case=False, na=False)]
 
         if st.session_state.ac_type != "All":
-            if st.session_state.ac_type == "Non AC":
-                filtered_df = filtered_df[filtered_df["bus_type"].str.contains(r'^(?=.*\b(NON|Non)\b).*', na=False)]
+            if st.session_state.ac_type == "NON AC":
+                filtered_df = filtered_df[
+                    filtered_df["bus_type"].str.contains(r'\bnon\b', case=False, na=False) |
+                    ~filtered_df["bus_type"].str.contains(r'AC|A/C|HVAC', case=False, na=False)]
             else:
                 filtered_df = filtered_df[
-                    filtered_df["bus_type"].str.contains(r'^(?=.*\b(AC|A/C)\b)(?!.*\b(NON|Non)\b).*', na=False)]
+                    filtered_df["bus_type"].str.contains(r'^(?=.*\b(?:AC|A/C|HVAC)\b)(?!.*\b(?:NON|Non)\b).*', na=False)]
 
         filtered_df = filtered_df[filtered_df["rating"] >= st.session_state.min_rating]
 

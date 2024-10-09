@@ -146,15 +146,18 @@ class Scraper:
         self.driver.switch_to.window(self.driver.window_handles[1])
         self.modify_date_and_search(self.date_to_be_fetched)
 
-        elements = self.driver.find_elements(By.XPATH, "(//ul[@class='bus-items'])[1]")
-        if elements:
-            self.page_load_js("(//ul[@class='bus-items'])[1]")  # List element needs to be refreshed
+        page_data = None
+        bus_not_found_element = self.driver.find_elements(By.XPATH, "//div[text()='Oops! No buses found.']")
+        if not bus_not_found_element:  # Proceed with scraping if buses are found.
+            bus_list = self.driver.find_elements(By.XPATH, "(//ul[@class='bus-items'])[1]")
 
-        self.select_view_buses_and_load_page()
-        # Scraping data and storing in data
-        page_data = self.scrape_data(route_name, route_link)
+            if bus_list:
+                self.page_load_js("(//ul[@class='bus-items'])[1]")  # Refresh the List
+            self.select_view_buses_and_load_page()
+            # Scraping data and storing in data
+            page_data = self.scrape_data(route_name, route_link)
 
-        # Closing and witching to parent window
+        # Closing and switching to parent window
         self.driver.close()
         self.driver.switch_to.window(self.driver.window_handles[0])
         return page_data
@@ -192,7 +195,10 @@ class Scraper:
         self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
 
         for index, element in enumerate(url_elements):
-            pages_list += self.click_link_and_open_in_new_window(element, routes[index], urls[index])
+            page_data = self.click_link_and_open_in_new_window(element, routes[index], urls[index])
+
+            if page_data:   # Only add if valid data is returned
+                pages_list += page_data
 
     def safe_find_element_text(self, locator_type, locator_value, default="null", timeout=3):
         """
@@ -361,7 +367,7 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
                 print(f"Element {count} generated an exception: {exc}")
 
     print(f"End: {datetime.now()}")
-    print(parallel_scraped_data)
+    # print(parallel_scraped_data)
     return parallel_scraped_data
 
 
