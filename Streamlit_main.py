@@ -91,7 +91,7 @@ def display_homepage():
         """, unsafe_allow_html=True)
 
     # Title and Introduction
-    st.markdown('<p class="big-font">Welcome to the Bus Data Management System</p>', unsafe_allow_html=True)
+    st.markdown('<p class="big-font">Welcome to the Bus Data Management</p>', unsafe_allow_html=True)
     st.markdown("""
         This application allows you to fetch, scrape, and manage bus service data. 
         Navigate through different sections to perform various operations.
