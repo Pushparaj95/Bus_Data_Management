@@ -141,7 +141,7 @@ def display_homepage():
             </div>
         </div>
         """, unsafe_allow_html=True)
-
+    st.write('<div style="height: 20px;"></div>', unsafe_allow_html=True)
     # Getting Started and Help sections
     st.markdown('<p class="medium-font">Getting Started</p>', unsafe_allow_html=True)
     st.markdown("""
