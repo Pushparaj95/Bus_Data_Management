@@ -137,7 +137,6 @@ class Scraper:
         :param route_name: Route Name to be added in scraped data
         :param route_link: Route Link to be added in scraped data
         :returns scraped date of individual given element page.
-        :rtype List[List]
         """
         # Control clicks to open in new window
         ActionChains(self.driver).key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
@@ -181,8 +180,8 @@ class Scraper:
                 page.click()
                 self.fetch_route_details(pages_data)
 
-        except (TimeoutException, NoSuchElementException) as e:
-            print("Pages is not available, single page to fetch")
+        except (TimeoutException, NoSuchElementException):
+            # print("Pages is not available, single page to fetch")
             self.fetch_route_details(pages_data)
         return pages_data
 
@@ -191,8 +190,10 @@ class Scraper:
         url_elements = self.driver.find_elements(By.CSS_SELECTOR, ".route_details a")
         urls = [elem.get_attribute('href') for elem in url_elements]
         routes = [elem.text for elem in url_elements]
-        # Scrolling to first route
-        self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
+
+        first_route = self.driver.find_elements(By.XPATH, "(//div[@class='route_details']/a)[1]")
+        if first_route:  # Scrolling to first route
+            self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
 
         for index, element in enumerate(url_elements):
             page_data = self.click_link_and_open_in_new_window(element, routes[index], urls[index])
@@ -317,7 +318,7 @@ class Scraper:
             :param index: The index of the element to scrape.
             :return: A nested list containing the scraped data for all the specified element.
             """
-        print(f"Scraping from element: {index}")
+        print(f"Scraping from Service: {index}")
         xpath = f"(//div[@class='rtcCards'])[{index}]"
         self.click_element(By.XPATH, xpath)
         datas = self.navigate_to_pages_and_collect_data(".DC_117_paginationTable div")
@@ -342,9 +343,9 @@ def scrape_data_for_element(count, default_date=None):
     return scrape_data
 
 
-def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
+def scrape_data_in_parallel(thread_count=2, num_of_elements=10, date=None):
     """
-    Custom method to create separate driver instance and scrape data parallely
+    Custom method to create separate driver instance and scrape data in parallel
     :param thread_count: Count of threads to use for execution
     :param num_of_elements: count of services data to be scraped from RedBus
     :param date: Date of data to be scraped, If not provided will scrape tomorrow's date by default.
@@ -353,16 +354,21 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
     print(f"Start: {datetime.now()}")
     parallel_scraped_data = []
 
+    # Using ThreadPoolExecutor for parallel execution
     with ThreadPoolExecutor(max_workers=thread_count) as executor:
-        future_to_element = {executor.submit(scrape_data_for_element, count, date): count for count in
-                             range(1, num_of_elements + 1)}
+        future_to_element = {}
+        for count in range(1, num_of_elements + 1):
+            future = executor.submit(scrape_data_for_element, count, date)
+            future_to_element[future] = count
+            time.sleep(0.5)
 
         # Process results as they complete
         for future in as_completed(future_to_element):
             count = future_to_element[future]
             try:
                 data = future.result()
-                parallel_scraped_data += data
+                if data:
+                    parallel_scraped_data += data
             except Exception as exc:
                 print(f"Element {count} generated an exception: {exc}")
 
@@ -374,7 +380,7 @@ def scrape_data_parallely(thread_count=2, num_of_elements=10, date=None):
 URL = "https://www.redbus.in/"
 
 if __name__ == "__main__":
-    scraped_data = scrape_data_parallely(thread_count=4, num_of_elements=10)
+    scraped_data = scrape_data_in_parallel(thread_count=4, num_of_elements=10)
 
     data_handler = DataHandler(
         host='localhost',  # Give your Host name
