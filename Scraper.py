@@ -139,6 +139,7 @@ class Scraper:
         :returns scraped date of individual given element page.
         """
         # Control clicks to open in new window
+        self.scroll_to_element(element=element)
         ActionChains(self.driver).key_down(Keys.CONTROL).click(element).key_up(Keys.CONTROL).perform()
 
         # Switching to parent window
@@ -191,9 +192,9 @@ class Scraper:
         urls = [elem.get_attribute('href') for elem in url_elements]
         routes = [elem.text for elem in url_elements]
 
-        first_route = self.driver.find_elements(By.XPATH, "(//div[@class='route_details']/a)[1]")
-        if first_route:  # Scrolling to first route
-            self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
+        # first_route = self.driver.find_elements(By.XPATH, "(//div[@class='route_details']/a)[1]")
+        # if first_route:  # Scrolling to first route
+        #     self.scroll_to_element(xpath="(//div[@class='route_details']/a)[1]")
 
         for index, element in enumerate(url_elements):
             page_data = self.click_link_and_open_in_new_window(element, routes[index], urls[index])
@@ -242,14 +243,25 @@ class Scraper:
             duration = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'dur'))
             des_time = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'bp-time'))
             rating_text = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'rating-sec'))
-            if rating_text and rating_text.replace('.', '', 1).isdigit():  # Handle float values like '3.5'
-                rating = round(float(rating_text), 1)  # Convert to float and round to 1 decimal place
-            else:
+            try:
+                if rating_text and rating_text.replace('.', '', 1).isdigit():
+                    rating = round(float(rating_text), 1)
+                else:
+                    rating = None
+            except ValueError:
                 rating = None
-            price_value = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'fare d-block'))
-            price = format(float(re.sub(r'[^\d\.]+', '', price_value)), '.2f')
-            seats_value = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'seat-left'))
-            seats_available = int(re.sub(r'[^\d\.]+', '', seats_value))
+            try:
+                price_value = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'fare d-block'))
+                price_str = re.sub(r'[^\d.]+', '', price_value)
+                price = "{:.2f}".format(float(price_str)) if price_str else None
+            except ValueError:
+                price = None
+            try:
+                seats_value = self.safe_find_element_text(By.XPATH, d_xpath.format(x, 'seat-left'))
+                seats_str = re.sub(r'[^\d]+', '', seats_value)
+                seats_available = int(seats_str) if seats_str else None
+            except ValueError:
+                seats_available = None
             raw = [route_name, route_link, bus_name, bus_type, dp_time, duration, des_time, rating, price,
                    seats_available]
             page_data.append(raw)
